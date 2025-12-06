@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Hash Transfer | ITCSI July 2024</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hash-wasm@4.9.0/dist/argon2.umd.min.js"></script>
+
+    <style>
+        .hash-output { 
+            font-family: 'Consolas', 'Monaco', monospace; 
+            background-color: #f8f9fa; 
+            color: #d63384; 
+            font-weight: bold;
+        }
+        .algo-badge { font-size: 0.75em; margin-left: 8px; vertical-align: middle; }
+        main > .container { padding: 60px 15px 0; }
+        .footer { background-color: #f8f9fa; }
+        .navbar-brand img { height: 40px; margin-right: 10px; }
+        
+        .btn-mini-download { font-size: 0.8rem; padding: 4px 8px; }
+        body { background-color: rgb(3, 7, 53); }
+
+        /* 添加在你的 <style> 标签里 */
+            .navbar .container-fluid {
+            padding-left: 155px;  /* 左边 Logo 离边缘的距离 */
+            padding-right: 155px; /* 右边文字 离边缘的距离 */
+        }
+    </style>
+</head>
+<body >
+
+    <header>
+        <nav class="navbar navbar-expand-md navbar-dark fixed-top " style="background-color: black;">
+            
+            <div class="container-fluid">
+                <a class="navbar-brand" href="https://itcsi.familyyee.com" >
+                    <img src="https://itcsi.familyyee.com/img/ITCSI.png" alt="Logo" style="width: 100px; height: auto;">
+                </a>
+                <div class="collapse navbar-collapse" id="navbarCollapse">
+                    <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                        <li class="nav-item"><a class="nav-link " href="https://itcsi.familyyee.com">HOME</a></li>
+                        <li class="nav-item"><a class="nav-link active" href="Hash.html">HASH TRANSFER</a></li>
+                        <li class="nav-item"><a class="nav-link disabled">ADMIN PORTAL</a></li>
+                    </ul>
+                    <span class="navbar-text text-warning small">
+                        <i class="fas fa-lock"></i> This is Secured Environment
+                    </span>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="flex-shrink-0">
+        <div class="container">
+            
+            <div class="row justify-content-center mt-4">
+                <div class="col-lg-10">
+                    
+                    <div class="text-center mb-5" style="margin-top: 50px;">
+                        <h2 class="display-6 fw-bold" style="color: white;">Password Hash Transfer</h2>
+                        <p class="lead" style="margin-bottom: 60px; color: white;">This is a ITCSI024 Cyber Security Assignment 1.</p>
+                    </div>
+
+                    <div class="card shadow-sm mb-5 border-0"> <!-- This is a card of the input text -->
+                        <div class="card-header bg-white py-3">
+                            <i class="fas fa-keyboard me-2"></i><strong>Input Your Text</strong>
+                        </div>
+                        <div class="card-body p-4">
+                            <label for="inputText" class="form-label text-muted small text-uppercase fw-bold">Plaintext</label> <!-- This is a sub title in the Input Your Text card.--> 
+                            <div class="input-group mb-3">
+                                <span class="input-group-text"><i class="fas fa-key"></i></span> <!-- This is an Key icon in the input box.-->
+                                <input type="text" id="inputText" class="form-control form-control-lg" placeholder="Enter text to hash..." value=""> <!-- This is the input box for user to enter text.-->
+                                <button class="btn btn-primary px-4" onclick="generateAllHashes()"> <!--This is a button for the run transfer in the card informtation.-->
+                                    <i class="fas fa-cogs me-1"></i><b> Start To Run</b> 
+                                </button>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <button class="btn btn-outline-success btn-sm" id="downloadAllBtn" onclick="downloadAllTxt()" disabled>
+                                    <i class="fas fa-file-archive me-1"></i> Download Full Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="resultsArea" class="row g-4"> <!-- This is a card of the output text -->
+                        
+                        <div class="col-md-6">
+                            <div class="card h-100 border-warning shadow-sm">
+                                <div class="card-header bg-warning bg-opacity-25 text-dark d-flex justify-content-between align-items-center">
+                                    <strong>MD5</strong>
+                                    <button class="btn btn-dark btn-mini-download dl-btn" onclick="downloadSingle('md5')" disabled>
+                                        <i class="fas fa-download"></i> .txt
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" id="out-md5" class="form-control hash-output" readonly>
+                                        <button class="btn btn-secondary" onclick="copyToClipboard('out-md5')"><i class="fas fa-copy"></i></button>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">Format: 32 hex chars</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card h-100 border-info shadow-sm">
+                                <div class="card-header bg-info bg-opacity-25 text-dark d-flex justify-content-between align-items-center">
+                                    <strong>SHA-256</strong>
+                                    <button class="btn btn-dark btn-mini-download dl-btn" onclick="downloadSingle('sha256')" disabled>
+                                        <i class="fas fa-download"></i> .txt
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" id="out-sha256" class="form-control hash-output" readonly>
+                                        <button class="btn btn-secondary" onclick="copyToClipboard('out-sha256')"><i class="fas fa-copy"></i></button>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">Format: 64 hex chars</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <div class="card border-primary shadow-sm">
+                                <div class="card-header bg-primary bg-opacity-75 text-white d-flex justify-content-between align-items-center">
+                                    <div><i class="fas fa-shield-alt me-1"></i> <strong>Bcrypt</strong></div>
+                                    <button class="btn btn-light btn-mini-download text-primary dl-btn" onclick="downloadSingle('bcrypt')" disabled>
+                                        <i class="fas fa-download"></i> Download .txt
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group">
+                                        <input type="text" id="out-bcrypt" class="form-control hash-output" readonly>
+                                        <button class="btn btn-outline-primary" onclick="copyToClipboard('out-bcrypt')">Copy</button>
+                                    </div>
+                                    <div class="mt-2 small text-primary" id="bcrypt-info"><i class="fas fa-cog"></i> Waiting for input...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12" style="margin-bottom: 50px;">
+                            <div class="card border-success shadow-sm">
+                                <div class="card-header bg-success bg-opacity-75 text-white d-flex justify-content-between align-items-center">
+                                    <div><i class="fas fa-hdd me-1"></i> <strong>Argon2id</strong></div>
+                                    <button class="btn btn-light btn-mini-download text-success dl-btn" onclick="downloadSingle('argon2')" disabled>
+                                        <i class="fas fa-download"></i> Download .txt
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group">
+                                        <input type="text" id="out-argon2" class="form-control hash-output" readonly>
+                                        <button class="btn btn-outline-success" onclick="copyToClipboard('out-argon2')">Copy</button>
+                                    </div>
+                                    <div class="mt-2 small text-success" id="argon2-info"><i class="fas fa-cog"></i> Waiting for input...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div> <!-- End of results area -->
+            
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer mt-auto py-3 border-top" style="background-color: black;">
+        <div class="container" style="margin-top: 10px; margin-bottom: 10px;">
+            <div class="row align-items-center" >
+                <div class="col-md-4 text-center text-md-start" >
+                    <span class="text-muted fw-bold" ><a style="color: white;">Assignment Submission</a></span><br>
+                    <small class="text-secondary"><a style="color: white;">
+                        YEE JHI QUAN (2470004-ITCSI-DB) <BR>
+                        CHONG LI JIE (2470145-ITCSI)</a>
+                    </small>
+                </div>
+                <div class="col-md-4 text-center">
+                    
+                    <small class="text-muted">
+                        <a style="color: white;">
+                        Copyright &copy; 2025 ITCSI July 2024. All Rights Reserved.
+                        </a>
+                    </small>
+                    <small class="text-muted">
+                        <a style="color: white;">
+                        Create by YEE JHI QUAN & CHONG LI JIE.
+                        </a>
+                    </small>
+                    
+                </div>
+                <div class="col-md-4 text-center text-md-end">
+                    <span class="badge bg-primary">ITCSI024 Cyber Security</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 生成函数
+        async function generateAllHashes() {
+            const text = document.getElementById('inputText').value;
+            if (!text) { alert("Please enter a password!"); return; }
+            
+            // 禁用所有下载按钮，防止误触
+            let btns = document.querySelectorAll('.dl-btn');
+            btns.forEach(btn => btn.disabled = true);
+            document.getElementById('downloadAllBtn').disabled = true;
+
+            // 1. MD5
+            const md5Hash = CryptoJS.MD5(text).toString();
+            document.getElementById('out-md5').value = md5Hash;
+
+            // 2. SHA-256
+            const sha256Hash = CryptoJS.SHA256(text).toString();
+            document.getElementById('out-sha256').value = sha256Hash;
+
+            // 3. Bcrypt
+            const salt = dcodeIO.bcrypt.genSaltSync(10); 
+            const bcryptHash = dcodeIO.bcrypt.hashSync(text, salt);
+            document.getElementById('out-bcrypt').value = bcryptHash;
+            document.getElementById('bcrypt-info').innerHTML = `<i class="fas fa-check-circle"></i> Generated with Salt: <code>${salt}</code> (Cost: 10)`;
+
+            // 4. Argon2id
+            try {
+                const saltArray = new Uint8Array(16);
+                window.crypto.getRandomValues(saltArray);
+
+                const argon2Hash = await hashwasm.argon2id({
+                    password: text,
+                    salt: saltArray,
+                    parallelism: 1,
+                    iterations: 2,
+                    memorySize: 64 * 1024,
+                    hashLength: 32,
+                    outputType: 'encoded'
+                });
+                
+                document.getElementById('out-argon2').value = argon2Hash;
+                document.getElementById('argon2-info').innerHTML = `<i class="fas fa-check-circle"></i> Params: Memory=64MB, Time=2, Salt=Random(16b)`;
+                
+            } catch (error) {
+                console.error(error);
+                document.getElementById('out-argon2').value = "Error: " + error;
+            }
+
+            // 启用所有下载按钮
+            btns.forEach(btn => btn.disabled = false);
+            document.getElementById('downloadAllBtn').disabled = false;
+        }
+
+        // --- 新增：独立下载功能 ---
+        function downloadSingle(type) {
+            const textInput = document.getElementById('inputText').value;
+            let content = "";
+            let fileName = "";
+
+            if (type === 'md5') {
+                content = document.getElementById('out-md5').value;
+                fileName = `md5_${textInput}.txt`;
+            } else if (type === 'sha256') {
+                content = document.getElementById('out-sha256').value;
+                fileName = `sha256_${textInput}.txt`;
+            } else if (type === 'bcrypt') {
+                content = document.getElementById('out-bcrypt').value;
+                fileName = `bcrypt_${textInput}.txt`;
+            } else if (type === 'argon2') {
+                content = document.getElementById('out-argon2').value;
+                fileName = `argon2_${textInput}.txt`;
+            }
+
+            // 执行下载
+            const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+        }
+
+        // --- 原有：全部下载功能 ---
+        function downloadAllTxt() {
+            const textInput = document.getElementById('inputText').value;
+            const md5 = document.getElementById('out-md5').value;
+            const sha256 = document.getElementById('out-sha256').value;
+            const bcrypt = document.getElementById('out-bcrypt').value;
+            const argon2 = document.getElementById('out-argon2').value;
+
+            const fileContent = 
+`=== SECURITY AUDIT REPORT ===
+Payload: ${textInput}
+Date: ${new Date().toLocaleString()}
+
+[MD5]
+${md5}
+
+[SHA-256]
+${sha256}
+
+[Bcrypt]
+${bcrypt}
+
+[Argon2id]
+${argon2}
+`;
+            const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `full_report_${textInput}.txt`;
+            link.click();
+        }
+
+        function copyToClipboard(elementId) {
+            var copyText = document.getElementById(elementId);
+            copyText.select();
+            navigator.clipboard.writeText(copyText.value);
+            copyText.style.backgroundColor = "#d4edda";
+            setTimeout(() => { copyText.style.backgroundColor = "#f8f9fa"; }, 500);
+        }
+    </script>
+</body>
+</html>
